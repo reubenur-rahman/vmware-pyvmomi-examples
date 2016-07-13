@@ -8,6 +8,7 @@ import atexit
 import argparse
 import sys
 import time
+import ssl
 
 from pyVmomi import vim, vmodl
 from pyVim import connect
@@ -20,6 +21,7 @@ inputs = {'vcenter_ip': '15.10.10.211',
           #create, remove or revert
           'operation' : 'create',
           'snapshot_name' : 'my_test_snapshot',   
+          'ignore_ssl': True
           }
 
 
@@ -98,8 +100,15 @@ def main():
         si = None
         try:
             print "Trying to connect to VCENTER SERVER . . ."
+            
+            context = None
+            if inputs['ignore_ssl']:
+              context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+              context.verify_mode = ssl.CERT_NONE
+            
             #si = connect.Connect(args.host, int(args.port), args.user, args.password, service="hostd")
-            si = connect.Connect(inputs['vcenter_ip'], 443, inputs['vcenter_user'], inputs['vcenter_password'])
+            si = connect.Connect(inputs['vcenter_ip'], 443, inputs['vcenter_user'], inputs['vcenter_password'],
+                sslContext=context)
         except IOError, e:
             pass
             atexit.register(Disconnect, si)
