@@ -18,7 +18,7 @@ inputs = {'vcenter_ip': '15.10.10.211',
           'vcenter_password': 'Password123',
           'vcenter_user': 'Administrator',
           'vm_name' : 'reuben-test',
-          #create, remove or revert
+          #create, remove or list
           'operation' : 'create',
           'snapshot_name' : 'my_test_snapshot',   
           'ignore_ssl': True
@@ -93,6 +93,26 @@ def invoke_and_track(func, *args, **kw):
         wait_for_task(task)
     except:
         raise
+
+def get_snapshots(vm):
+    return get_snapshots_recursively(vm.snapshot.rootSnapshotList, '')
+
+def get_snapshots_recursively(snapshots, snapshot_location):
+    snapshot_paths = []
+    
+    if not snapshots:
+        return snapshot_paths 
+
+    for snapshot in snapshots:
+        if snapshot_location:
+            current_snapshot_path = snapshot_location + '/' + snapshot.name
+        else:
+            current_snapshot_path = snapshot.name
+
+        snapshot_paths.append(current_snapshot_path)
+        snapshot_paths = snapshot_paths + get_snapshots_recursively(snapshot.childSnapshotList, current_snapshot_path)
+
+    return snapshot_paths
     
 def main():
 
@@ -143,7 +163,13 @@ def main():
                     invoke_and_track(snap_obj.RemoveSnapshot_Task(True))
                 else:
                     print "Couldn't find any snapshots"
-        
+                    
+        if operation == 'list':
+            print 'Display list of snapshots on virtual machine ' + vm.name
+            snapshot_paths = get_snapshots(vm)
+            for snapshot_path in snapshot_paths:
+                print snapshot_path
+                
     except vmodl.MethodFault, e:
         print "Caught vmodl fault: %s" % e.msg
         return 1
